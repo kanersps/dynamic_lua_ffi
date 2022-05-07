@@ -1,5 +1,29 @@
-use mlua::Lua;
+use std::fmt::{Display, Formatter};
+use mlua::{Lua, MultiValue, Value};
 use mlua::prelude::LuaResult;
+use rustyline::Editor;
+use rustyline::error::ReadlineError;
+
+fn print_multivalue(m: MultiValue) {
+    let values = m.into_vec();
+
+    for value in values {
+        match value {
+            Value::Nil => println!("nil"),
+            Value::Boolean(b) => println!("{}", b),
+            Value::LightUserData(lu) => println!("{:?}", lu),
+            Value::Integer(i) => println!("{}", i),
+            Value::Number(n) => println!("{}", n),
+            Value::String(str) => println!("{}", str.to_str().unwrap()),
+            Value::Table(tbl) => println!("{:?}", tbl),
+            Value::Function(func) => println!("{:?}", func.info().what),
+            Value::Thread(th) => println!("{:?}", th),
+            Value::UserData(ud) => println!("{:?}", ud),
+            Value::Error(e) => println!("{:?}", e),
+            _ => println!("Can not print!"),
+        }
+    }
+}
 
 fn main() -> LuaResult<()> {
     let lua = Lua::new();
@@ -16,9 +40,30 @@ fn main() -> LuaResult<()> {
 
     lua.globals().set("load_library", load_library);
 
-    lua.load("\
-    local test = function() return 100 end
-    print(test() * 400)").exec()?;
+    let mut rl = Editor::<()>::new();
+
+    loop {
+        let readline = rl.readline(">> ");
+        match readline {
+            Ok(line) => {
+                rl.add_history_entry(line.as_str());
+                let result = lua.load(line.as_str()).eval::<MultiValue>()?;
+                print_multivalue(result);
+            },
+            Err(ReadlineError::Interrupted) => {
+                println!("CTRL-C");
+                break
+            },
+            Err(ReadlineError::Eof) => {
+                println!("CTRL-D");
+                break
+            },
+            Err(err) => {
+                println!("Error: {:?}", err);
+                break
+            }
+        }
+    }
 
     Ok(())
 }

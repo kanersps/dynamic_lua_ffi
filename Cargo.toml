@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 mlua = { version = "0.8.0-beta.4", features = ["luajit52", "vendored"] }
 libloading = "0.7"
+rustyline = "9.1.0"
